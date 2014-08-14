@@ -237,6 +237,37 @@ class GmshTetrahedralElement(GmshElementBase):
     @memoize_method
     def gmsh_node_tuples(self):
         # gmsh's node ordering is on crack
+        # gmsh ordering is as follows:
+        # - First, the four vertices of the tetrahedron are listed:
+        #   (0, 0, 0), (self.order, 0, 0), (0, self.order, 0),
+        #   (0, 0, self.order); applies if self.order >= 1
+        # - Next, edges are listed, if applicable, in the following order,
+        #   for self.order >= 2:
+        #   - 1. y = z = 0 edge, in increasing order of x, starting at (1, 0, 0)
+        #   - 2. x + y = self.order, z = 0 edge, decreasing order of x, starting
+        #        at (self.order - 1, 1, 0)
+        #   - 3. x = z = 0 edge, decreasing order of y,
+        #        starting at (self.order-1, 0, 0)
+        #   - 4. x = y = 0 edge, decreasing order of z,
+        #        starting at (0, 0, self.order - 1)
+        #   - 5. y + z = self.order, x = 0, increasing order of y,
+        #        starting at (0, 1, self.order - 1)
+        #   - 6. x + z = self.order, y = 0, increasing order of x,
+        #        starting at (1, 0, self.order - 1)
+        # - After that, faces are listed, if applicable, in the following order, for
+        #   self.order >= 3:
+        #   - 1. z = 0, vertices first (same convention as triangles),
+        #        then edges (same convention as triangles)
+        #   - 2. y = 0, vertices first (same convention as triangles),
+        #        then edges (same convention as triangles)
+        #   - 3. x = 0, vertices first (same convention as triangles),
+        #        then edges (same convention as triangles)
+        #   - 4. x + y + z = self.order, vertices first (same convention
+        #        as triangles)
+        #        then edges (same convention as triangles)
+        # - At this point, an outer one-node-thick tetrahedral "layer"
+        #   has been enumerated, and the process can be repeated on the
+        #   next-innermost layer of thickness one node, for self.order >= 4.
         return {
                 1: [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)],
                 2: [
